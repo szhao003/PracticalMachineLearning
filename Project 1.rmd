@@ -1,0 +1,99 @@
+#Practical Machine Learning: Final Project
+
+#Background Information
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively 
+inexpensively. These type of devices are part of the quantified self movement - a group of enthusiasts who take measurements about themselves 
+regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify 
+how much of a particular activity they do, but they rarely quantify how well they do it. To address this question, the goal of this report was to 
+analyze data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants and to predict how well the participants performed barbell 
+lifts. The participants were asked to perform barbell lifts correctly and incorrectly in 5 different ways. The method employed in this study is the 
+random forest classification because it is one of the best classification methods with high accurarcy. 
+
+#Data Sources
+
+The training data for this project are available here:
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+The test data are available here:
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+#Project Requirements
+
+The goal of this project is to predict the manner in which they did the exercise. There is the "classe" variable in the training set and is treated as 
+the predictor. Any of the other variables can be used to predict personal exercises. After you complete the project, a report ending with .md will be 
+created to describe model building, cross validation testing, what is sample error, and the rational behind the analysis. In addition, the prediction 
+model will be used to predict 20 different test cases and the results will be submitted to the programming assignment for automated grading.
+
+Submission of the project should consist of a link to a Github repo with a R markdown and a compiled HTML files describing the procedure and analysis.
+
+
+#Analysis procedure
+
+###Loading libraries needed for this project
+
+```{r}
+library(caret)
+library(knitr)
+library(randomForest)
+```
+
+###Read the csv file to R and transfer NULL to NA.
+```{r}
+training <- read.csv("F:/Data Science/Data Science/CourseraClasses/Data Scientist Specialization MOOC/Practical Machine Learning/Homework 1/pml-training.csv", na.string = c("", "NA"))
+testing <- read.csv("F:/Data Science/Data Science/CourseraClasses/Data Scientist Specialization MOOC/Practical Machine Learning/Homework 1/pml-testing.csv", na.string = c("", "NA"))
+```
+
+###Eliminate columns with 80% of NAs from training and test data.
+```{r}
+training1 <- training[, colSums(is.na(training)) < nrow(training)*0.8]
+testing1 <- testing[, colSums(is.na(testing)) < nrow(testing)*0.8]
+```
+
+Creating a classification model. The training data was split up into a training set (70%) and a cross-validation set (30%). The goal of this split was 
+to train a classification model on the training data, to test the model on a data set that was not used in model buliding process, and to reduce the 
+variance of the classification model.
+
+###split the training data into a training set and a cross-validation set
+```{r}
+inTrain <- createDataPartition(y = training1$classe, p = 0.7, list = FALSE)
+training2 <- training1[inTrain,]
+CrossValidation <- training1[-inTrain,]
+```
+
+###Skip the first 5 variables that may cause confusion to the algorithm
+
+```{r}
+training3 <- training2[, 6:60]
+```
+
+
+###Fit the data to a random forest classication model to predict classe using all variables in the given data
+```{r}
+fitRF <- train(classe~., data = training3, method = 'rf', ntree = 15)
+fitRF$finalModel
+```
+
+The model produced a very small out-of-sample error (1.17%). This model appears to be satisfactory for the training data. To aovid model overfit, the 
+next step is to test the classification model in the cross-validation data and see if the model fits the data well. Thus, the model was used to 
+classify the remianing 30% of data. The results compared with the actual classifications using a confusion matrix. 
+
+###Apply the classification model to the cross-validation sample and examine the accuracy of predictions.
+```{r}
+PredCV <- predict(fitRF, CrossValidation)
+confusionMatrix (PredCV, CrossValidation$classe)
+```
+
+The confusionMatrix revealed that the predicted values were very close to the actual values, with 99.8% of accuracy. Thus, this model seems to be robust, and 
+thus the prediction model was used to predict the testing data set.
+
+###Applying model to the testing data set.
+```{r}
+PredTest <- predict(fitRF, testing1)
+PredTest
+```
+
+Conclusions: Results from the testing data indicated the predicted model achieved 100% of accuracy. Thus, a simple classification model is quiet powerful in predicting 
+how well a person was perfomring an excercise.
